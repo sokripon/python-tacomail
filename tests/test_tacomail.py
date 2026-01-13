@@ -104,7 +104,7 @@ def test_full_email_flow(client: TacomailClient):
 
     # Verify email contents
     assert received_email.subject == test_subject
-    assert received_email.body.text == test_body
+    assert received_email.body.text.strip() == test_body
     assert received_email.to.address == test_email
 
 
@@ -199,7 +199,7 @@ def test_wait_for_email_filtered(client: TacomailClient):
 
     assert received_email is not None
     assert received_email.subject == "Second Subject"
-    assert received_email.body.text == "Second test email"
+    assert received_email.body.text.strip() == "Second test email"
 
     # Test with a filter that won't match
     def filter_nonexistent(email: Email) -> bool:

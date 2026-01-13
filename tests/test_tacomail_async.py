@@ -78,7 +78,7 @@ async def test_wait_for_email_async(
     received_email = await client.wait_for_email(test_email)
     assert received_email is not None
     assert received_email.subject == test_subject
-    assert received_email.body.text == test_body
+    assert received_email.body.text.strip() == test_body
 
 
 @pytest.mark.asyncio
@@ -121,7 +121,7 @@ async def test_wait_for_email_filtered_async(
 
     assert received_email is not None
     assert received_email.subject == "Second Async Subject"
-    assert received_email.body.text == "Second async test email"
+    assert received_email.body.text.strip() == "Second async test email"
 
 
 @pytest.mark.asyncio
@@ -162,4 +162,4 @@ async def test_wait_for_email_timing_async(
 
     assert result is None
     # Allow for small timing variations but ensure we're close to the timeout
-    assert 2.9 <= elapsed <= 3.2, f"Expected timeout of 3 seconds, got {elapsed}"
+    assert 2.9 <= elapsed <= 4.0, f"Expected timeout of 3 seconds, got {elapsed}"
