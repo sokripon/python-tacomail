@@ -58,7 +58,11 @@ async def test_wait_for_email_async(
     # Get random email address
     username = await client.get_random_username()
     domains = await client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    await client.create_session(username, domain)
 
     # Send test email (using sync sender)
     sender = PostmarkEmailSender()
@@ -86,7 +90,11 @@ async def test_wait_for_email_filtered_async(
     # Get random email address
     username = await client.get_random_username()
     domains = await client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    await client.create_session(username, domain)
 
     sender = PostmarkEmailSender()
 

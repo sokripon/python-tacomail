@@ -78,7 +78,11 @@ def test_full_email_flow(client: TacomailClient):
     # Get random email address
     username = client.get_random_username()
     domains = client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    client.create_session(username, domain)
 
     # Verify inbox is empty initially
     initial_inbox = client.get_inbox(test_email)
@@ -109,7 +113,11 @@ def test_delete_functionality(client: TacomailClient):
     # Setup: Create email address and send two test emails
     username = client.get_random_username()
     domains = client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    client.create_session(username, domain)
 
     sender = PostmarkEmailSender()
 
@@ -164,7 +172,11 @@ def test_wait_for_email_filtered(client: TacomailClient):
     # Get random email address
     username = client.get_random_username()
     domains = client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    client.create_session(username, domain)
 
     sender = PostmarkEmailSender()
 
