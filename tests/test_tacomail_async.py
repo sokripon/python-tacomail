@@ -1,5 +1,5 @@
 import pytest
-from tacomail import AsyncTacomailClient, Email
+from tacomail import AsyncTacomailClient, Email, Session
 from email_sender import PostmarkEmailSender
 import time
 from typing import AsyncGenerator
@@ -11,6 +11,42 @@ pytest_plugins = ("pytest_asyncio",)
 async def client_generator():
     async with AsyncTacomailClient("https://tacomail.de") as client:
         yield client
+
+
+@pytest.mark.asyncio
+async def test_create_session_async(
+    client_generator: AsyncGenerator[AsyncTacomailClient, None],
+):
+    client: AsyncTacomailClient = await anext(client_generator)
+
+    username = await client.get_random_username()
+    domains = await client.get_domains()
+    domain = domains[0]
+
+    session = await client.create_session(username, domain)
+
+    assert isinstance(session, Session)
+    assert session.username == username
+    assert session.domain == domain
+    assert isinstance(session.expires, int)
+    assert session.expires > 0
+
+
+@pytest.mark.asyncio
+async def test_delete_session_async(
+    client_generator: AsyncGenerator[AsyncTacomailClient, None],
+):
+    client: AsyncTacomailClient = await anext(client_generator)
+
+    username = await client.get_random_username()
+    domains = await client.get_domains()
+    domain = domains[0]
+
+    # Create a session first
+    await client.create_session(username, domain)
+
+    # Delete the session (should not raise an exception)
+    await client.delete_session(username, domain)
 
 
 @pytest.mark.asyncio

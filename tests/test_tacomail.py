@@ -1,5 +1,5 @@
 import pytest
-from tacomail import TacomailClient, Email
+from tacomail import TacomailClient, Email, Session
 from email_sender import PostmarkEmailSender
 
 
@@ -7,6 +7,32 @@ from email_sender import PostmarkEmailSender
 def client():
     with TacomailClient("https://tacomail.de") as client:
         yield client
+
+
+def test_create_session(client: TacomailClient):
+    username = client.get_random_username()
+    domains = client.get_domains()
+    domain = domains[0]
+
+    session = client.create_session(username, domain)
+
+    assert isinstance(session, Session)
+    assert session.username == username
+    assert session.domain == domain
+    assert isinstance(session.expires, int)
+    assert session.expires > 0
+
+
+def test_delete_session(client: TacomailClient):
+    username = client.get_random_username()
+    domains = client.get_domains()
+    domain = domains[0]
+
+    # Create a session first
+    client.create_session(username, domain)
+
+    # Delete the session (should not raise an exception)
+    client.delete_session(username, domain)
 
 
 def test_get_contact_email(client):
