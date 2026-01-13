@@ -159,7 +159,7 @@ Expected status: 200
 ```
 
 ## Fetching attachments
-Returns the ID and name of all attachments of a mail. The `present` field indicates whether the attachment can be downloaded. Attachments will only be saved until their total sizes exceeds the configured `maxAttachmentsSize`.
+Returns the ID and name of all attachments of a mail. The `present` field indicates whether the attachment can be downloaded. Attachments will only be saved until their total sizes exceed the configured `maxAttachmentsSize`.
 ```
 GET /api/v2/mail/:address/:mailId/attachments
 ```
