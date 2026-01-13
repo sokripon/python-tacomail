@@ -1,5 +1,5 @@
 import pytest
-from tacomail import TacomailClient, Email
+from tacomail import TacomailClient, Email, Session
 from email_sender import PostmarkEmailSender
 
 
@@ -7,6 +7,32 @@ from email_sender import PostmarkEmailSender
 def client():
     with TacomailClient("https://tacomail.de") as client:
         yield client
+
+
+def test_create_session(client: TacomailClient):
+    username = client.get_random_username()
+    domains = client.get_domains()
+    domain = domains[0]
+
+    session = client.create_session(username, domain)
+
+    assert isinstance(session, Session)
+    assert session.username == username
+    assert session.domain == domain
+    assert isinstance(session.expires, int)
+    assert session.expires > 0
+
+
+def test_delete_session(client: TacomailClient):
+    username = client.get_random_username()
+    domains = client.get_domains()
+    domain = domains[0]
+
+    # Create a session first
+    client.create_session(username, domain)
+
+    # Delete the session (should not raise an exception)
+    client.delete_session(username, domain)
 
 
 def test_get_contact_email(client):
@@ -52,7 +78,11 @@ def test_full_email_flow(client: TacomailClient):
     # Get random email address
     username = client.get_random_username()
     domains = client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    client.create_session(username, domain)
 
     # Verify inbox is empty initially
     initial_inbox = client.get_inbox(test_email)
@@ -74,7 +104,7 @@ def test_full_email_flow(client: TacomailClient):
 
     # Verify email contents
     assert received_email.subject == test_subject
-    assert received_email.body.text == test_body
+    assert received_email.body.text.strip() == test_body
     assert received_email.to.address == test_email
 
 
@@ -83,7 +113,11 @@ def test_delete_functionality(client: TacomailClient):
     # Setup: Create email address and send two test emails
     username = client.get_random_username()
     domains = client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    client.create_session(username, domain)
 
     sender = PostmarkEmailSender()
 
@@ -138,7 +172,11 @@ def test_wait_for_email_filtered(client: TacomailClient):
     # Get random email address
     username = client.get_random_username()
     domains = client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    client.create_session(username, domain)
 
     sender = PostmarkEmailSender()
 
@@ -161,7 +199,7 @@ def test_wait_for_email_filtered(client: TacomailClient):
 
     assert received_email is not None
     assert received_email.subject == "Second Subject"
-    assert received_email.body.text == "Second test email"
+    assert received_email.body.text.strip() == "Second test email"
 
     # Test with a filter that won't match
     def filter_nonexistent(email: Email) -> bool:

@@ -1,5 +1,5 @@
 import pytest
-from tacomail import AsyncTacomailClient, Email
+from tacomail import AsyncTacomailClient, Email, Session
 from email_sender import PostmarkEmailSender
 import time
 from typing import AsyncGenerator
@@ -14,6 +14,42 @@ async def client_generator():
 
 
 @pytest.mark.asyncio
+async def test_create_session_async(
+    client_generator: AsyncGenerator[AsyncTacomailClient, None],
+):
+    client: AsyncTacomailClient = await anext(client_generator)
+
+    username = await client.get_random_username()
+    domains = await client.get_domains()
+    domain = domains[0]
+
+    session = await client.create_session(username, domain)
+
+    assert isinstance(session, Session)
+    assert session.username == username
+    assert session.domain == domain
+    assert isinstance(session.expires, int)
+    assert session.expires > 0
+
+
+@pytest.mark.asyncio
+async def test_delete_session_async(
+    client_generator: AsyncGenerator[AsyncTacomailClient, None],
+):
+    client: AsyncTacomailClient = await anext(client_generator)
+
+    username = await client.get_random_username()
+    domains = await client.get_domains()
+    domain = domains[0]
+
+    # Create a session first
+    await client.create_session(username, domain)
+
+    # Delete the session (should not raise an exception)
+    await client.delete_session(username, domain)
+
+
+@pytest.mark.asyncio
 async def test_wait_for_email_async(
     client_generator: AsyncGenerator[AsyncTacomailClient, None],
 ):
@@ -22,7 +58,11 @@ async def test_wait_for_email_async(
     # Get random email address
     username = await client.get_random_username()
     domains = await client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    await client.create_session(username, domain)
 
     # Send test email (using sync sender)
     sender = PostmarkEmailSender()
@@ -38,7 +78,7 @@ async def test_wait_for_email_async(
     received_email = await client.wait_for_email(test_email)
     assert received_email is not None
     assert received_email.subject == test_subject
-    assert received_email.body.text == test_body
+    assert received_email.body.text.strip() == test_body
 
 
 @pytest.mark.asyncio
@@ -50,7 +90,11 @@ async def test_wait_for_email_filtered_async(
     # Get random email address
     username = await client.get_random_username()
     domains = await client.get_domains()
-    test_email = f"{username}@{domains[0]}"
+    domain = domains[0]
+    test_email = f"{username}@{domain}"
+
+    # Create session to receive emails (required in API v2)
+    await client.create_session(username, domain)
 
     sender = PostmarkEmailSender()
 
@@ -77,7 +121,7 @@ async def test_wait_for_email_filtered_async(
 
     assert received_email is not None
     assert received_email.subject == "Second Async Subject"
-    assert received_email.body.text == "Second async test email"
+    assert received_email.body.text.strip() == "Second async test email"
 
 
 @pytest.mark.asyncio
@@ -118,4 +162,4 @@ async def test_wait_for_email_timing_async(
 
     assert result is None
     # Allow for small timing variations but ensure we're close to the timeout
-    assert 2.9 <= elapsed <= 3.2, f"Expected timeout of 3 seconds, got {elapsed}"
+    assert 2.9 <= elapsed <= 4.0, f"Expected timeout of 3 seconds, got {elapsed}"

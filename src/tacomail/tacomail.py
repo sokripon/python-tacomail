@@ -27,6 +27,13 @@ class Attachment:
 
 
 @dataclass
+class Session:
+    expires: int
+    username: str
+    domain: str
+
+
+@dataclass
 class Email:
     id: str
     from_: EmailAddress
@@ -88,21 +95,59 @@ class TacomailClient:
 
     def get_contact_email(self) -> str:
         """Get the contact email address of the TacoMail instance."""
-        response = self.client.get(f"{self.base_url}/api/v1/contactEmail")
+        response = self.client.get(f"{self.base_url}/api/v2/contactEmail")
         response.raise_for_status()
         return response.json()["email"]
 
     def get_random_username(self) -> str:
         """Get a random username."""
-        response = self.client.get(f"{self.base_url}/api/v1/randomUsername")
+        response = self.client.get(f"{self.base_url}/api/v2/randomUsername")
         response.raise_for_status()
         return response.json()["username"]
 
     def get_domains(self) -> List[str]:
         """Get all available domains."""
-        response = self.client.get(f"{self.base_url}/api/v1/domains")
+        response = self.client.get(f"{self.base_url}/api/v2/domains")
         response.raise_for_status()
         return response.json()
+
+    def create_session(self, username: str, domain: str) -> Session:
+        """Create an inbox session for receiving emails.
+        
+        Only incoming mails with an associated inbox session are saved.
+        A session is valid for a configured time and can be renewed by
+        calling this method again with the same credentials.
+        
+        Args:
+            username: The username part of the email address
+            domain: The domain part of the email address
+            
+        Returns:
+            Session object containing expiration timestamp and credentials
+        """
+        response = self.client.post(
+            f"{self.base_url}/api/v2/session",
+            json={"username": username, "domain": domain}
+        )
+        response.raise_for_status()
+        return Session(**response.json())
+
+    def delete_session(self, username: str, domain: str) -> None:
+        """Delete an inbox session.
+        
+        This will cause any incoming mails associated with the session's
+        address to be rejected. It does not delete already saved mails.
+        
+        Args:
+            username: The username part of the email address
+            domain: The domain part of the email address
+        """
+        response = self.client.request(
+            "DELETE",
+            f"{self.base_url}/api/v2/session",
+            json={"username": username, "domain": domain}
+        )
+        response.raise_for_status()
 
     def get_random_address(self) -> str:
         """Get a random email address."""
@@ -117,21 +162,21 @@ class TacomailClient:
         Note: The maximum number of emails that can be retrieved is 10, regardless of the limit parameter."""
         params = {"limit": limit} if limit is not None else None
         response = self.client.get(
-            f"{self.base_url}/api/v1/mail/{address}", params=params
+            f"{self.base_url}/api/v2/mail/{address}", params=params
         )
         response.raise_for_status()
         return [Email.from_dict(email) for email in response.json()]
 
     def get_email(self, address: str, mail_id: str) -> Email:
         """Get a single email by its ID."""
-        response = self.client.get(f"{self.base_url}/api/v1/mail/{address}/{mail_id}")
+        response = self.client.get(f"{self.base_url}/api/v2/mail/{address}/{mail_id}")
         response.raise_for_status()
         return Email.from_dict(response.json())
 
     def get_attachments(self, address: str, mail_id: str) -> List[Attachment]:
         """Get all attachments of an email."""
         response = self.client.get(
-            f"{self.base_url}/api/v1/mail/{address}/{mail_id}/attachments"
+            f"{self.base_url}/api/v2/mail/{address}/{mail_id}/attachments"
         )
         response.raise_for_status()
         return [Attachment(**att) for att in response.json()]
@@ -141,7 +186,7 @@ class TacomailClient:
     ) -> bytes:
         """Download a single attachment."""
         response = self.client.get(
-            f"{self.base_url}/api/v1/mail/{address}/{mail_id}/attachments/{attachment_id}"
+            f"{self.base_url}/api/v2/mail/{address}/{mail_id}/attachments/{attachment_id}"
         )
         response.raise_for_status()
         return response.content
@@ -149,13 +194,13 @@ class TacomailClient:
     def delete_email(self, address: str, mail_id: str) -> None:
         """Delete a single email."""
         response = self.client.delete(
-            f"{self.base_url}/api/v1/mail/{address}/{mail_id}"
+            f"{self.base_url}/api/v2/mail/{address}/{mail_id}"
         )
         response.raise_for_status()
 
     def delete_inbox(self, address: str) -> None:
         """Delete all emails from an inbox."""
-        response = self.client.delete(f"{self.base_url}/api/v1/mail/{address}")
+        response = self.client.delete(f"{self.base_url}/api/v2/mail/{address}")
         response.raise_for_status()
 
     def wait_for_email(
@@ -235,21 +280,59 @@ class AsyncTacomailClient:
 
     async def get_contact_email(self) -> str:
         """Get the contact email address of the TacoMail instance."""
-        response = await self.client.get(f"{self.base_url}/api/v1/contactEmail")
+        response = await self.client.get(f"{self.base_url}/api/v2/contactEmail")
         response.raise_for_status()
         return response.json()["email"]
 
     async def get_random_username(self) -> str:
         """Get a random username."""
-        response = await self.client.get(f"{self.base_url}/api/v1/randomUsername")
+        response = await self.client.get(f"{self.base_url}/api/v2/randomUsername")
         response.raise_for_status()
         return response.json()["username"]
 
     async def get_domains(self) -> List[str]:
         """Get all available domains."""
-        response = await self.client.get(f"{self.base_url}/api/v1/domains")
+        response = await self.client.get(f"{self.base_url}/api/v2/domains")
         response.raise_for_status()
         return response.json()
+
+    async def create_session(self, username: str, domain: str) -> Session:
+        """Create an inbox session for receiving emails.
+        
+        Only incoming mails with an associated inbox session are saved.
+        A session is valid for a configured time and can be renewed by
+        calling this method again with the same credentials.
+        
+        Args:
+            username: The username part of the email address
+            domain: The domain part of the email address
+            
+        Returns:
+            Session object containing expiration timestamp and credentials
+        """
+        response = await self.client.post(
+            f"{self.base_url}/api/v2/session",
+            json={"username": username, "domain": domain}
+        )
+        response.raise_for_status()
+        return Session(**response.json())
+
+    async def delete_session(self, username: str, domain: str) -> None:
+        """Delete an inbox session.
+        
+        This will cause any incoming mails associated with the session's
+        address to be rejected. It does not delete already saved mails.
+        
+        Args:
+            username: The username part of the email address
+            domain: The domain part of the email address
+        """
+        response = await self.client.request(
+            "DELETE",
+            f"{self.base_url}/api/v2/session",
+            json={"username": username, "domain": domain}
+        )
+        response.raise_for_status()
 
     async def get_random_address(self) -> str:
         """Get a random email address."""
@@ -265,7 +348,7 @@ class AsyncTacomailClient:
         Note: The maximum number of emails that can be retrieved is 10, regardless of the limit parameter."""
         params = {"limit": limit} if limit is not None else None
         response = await self.client.get(
-            f"{self.base_url}/api/v1/mail/{address}", params=params
+            f"{self.base_url}/api/v2/mail/{address}", params=params
         )
         response.raise_for_status()
         return [Email.from_dict(email) for email in response.json()]
@@ -273,7 +356,7 @@ class AsyncTacomailClient:
     async def get_email(self, address: str, mail_id: str) -> Email:
         """Get a single email by its ID."""
         response = await self.client.get(
-            f"{self.base_url}/api/v1/mail/{address}/{mail_id}"
+            f"{self.base_url}/api/v2/mail/{address}/{mail_id}"
         )
         response.raise_for_status()
         return Email.from_dict(response.json())
@@ -281,7 +364,7 @@ class AsyncTacomailClient:
     async def get_attachments(self, address: str, mail_id: str) -> List[Attachment]:
         """Get all attachments of an email."""
         response = await self.client.get(
-            f"{self.base_url}/api/v1/mail/{address}/{mail_id}/attachments"
+            f"{self.base_url}/api/v2/mail/{address}/{mail_id}/attachments"
         )
         response.raise_for_status()
         return [Attachment(**att) for att in response.json()]
@@ -291,7 +374,7 @@ class AsyncTacomailClient:
     ) -> bytes:
         """Download a single attachment."""
         response = await self.client.get(
-            f"{self.base_url}/api/v1/mail/{address}/{mail_id}/attachments/{attachment_id}"
+            f"{self.base_url}/api/v2/mail/{address}/{mail_id}/attachments/{attachment_id}"
         )
         response.raise_for_status()
         return response.content
@@ -299,13 +382,13 @@ class AsyncTacomailClient:
     async def delete_email(self, address: str, mail_id: str) -> None:
         """Delete a single email."""
         response = await self.client.delete(
-            f"{self.base_url}/api/v1/mail/{address}/{mail_id}"
+            f"{self.base_url}/api/v2/mail/{address}/{mail_id}"
         )
         response.raise_for_status()
 
     async def delete_inbox(self, address: str) -> None:
         """Delete all emails from an inbox."""
-        response = await self.client.delete(f"{self.base_url}/api/v1/mail/{address}")
+        response = await self.client.delete(f"{self.base_url}/api/v2/mail/{address}")
         response.raise_for_status()
 
     async def wait_for_email(

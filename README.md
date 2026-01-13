@@ -30,6 +30,10 @@ with TacomailClient() as client:
     domains = client.get_domains()
     email_address = f"{username}@{domains[0]}"
     
+    # Create a session to receive emails (required for API v2)
+    session = client.create_session(username, domains[0])
+    print(f"Session expires at: {session.expires}")
+    
     # Wait for an email to arrive
     email = client.wait_for_email(email_address, timeout=30)
     if email:
@@ -47,7 +51,12 @@ from tacomail import AsyncTacomailClient
 async def main():
     async with AsyncTacomailClient() as client:
         # Get a random email address
-        email_address = await client.get_random_address()
+        username = await client.get_random_username()
+        domains = await client.get_domains()
+        email_address = f"{username}@{domains[0]}"
+        
+        # Create a session to receive emails (required for API v2)
+        session = await client.create_session(username, domains[0])
         
         # Wait for an email with specific subject
         def filter_email(email):
@@ -75,11 +84,14 @@ asyncio.run(main())
 - `EmailAddress`: Dataclass for email addresses
 - `EmailBody`: Dataclass for email content
 - `Attachment`: Dataclass for email attachments
+- `Session`: Dataclass for inbox session information
 
 ### Common Methods
 
 Both sync and async clients provide these methods:
 
+- `create_session(username, domain)`: Create an inbox session to receive emails
+- `delete_session(username, domain)`: Delete an inbox session
 - `get_random_username()`: Generate a random username
 - `get_domains()`: Get list of available domains
 - `get_random_address()`: Get a complete random email address
