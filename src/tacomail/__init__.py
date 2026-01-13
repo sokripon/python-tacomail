@@ -5,6 +5,7 @@ from .tacomail import (
     EmailAddress,
     EmailBody,
     Attachment,
+    Session,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "EmailBody",
     "Attachment",
     "AsyncTacomailClient",
+    "Session",
 ]
