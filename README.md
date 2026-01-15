@@ -125,7 +125,7 @@ The test suite uses [Postmark](https://postmarkapp.com/) to send real test email
 
 ```bash
 # .env
-POSTMARK_API_KEY=your_postmark_api_key_here
+POSTMARK_API_TOKEN=your_postmark_api_token_here
 SENDER_EMAIL=your_email_address_here  # The verified sender email in Postmark
 ```
 
@@ -136,6 +136,28 @@ pytest
 
 # Run linter
 ruff check .
+```
+
+### Checking Postmark Credentials
+
+The test suite includes a utility to verify that your Postmark credentials are properly configured:
+
+```python
+from tests.email_sender import PostmarkEmailSender
+
+# Initialize sender and check credentials
+sender = PostmarkEmailSender()
+
+# Check if credentials are set (without testing connection)
+result = sender.check_credentials(test_connection=False)
+print(f"Credentials set: {result['credentials_set']}")
+
+# Check if credentials are set and test the connection
+result = sender.check_credentials(test_connection=True)
+if result['connection_valid']:
+    print("Credentials are valid and connection successful!")
+else:
+    print(f"Connection failed: {result['error']}")
 ```
 
 ## Credits
