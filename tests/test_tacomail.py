@@ -73,6 +73,51 @@ def test_email_sender_initialization():
     assert sender.SMTP_PORT == 587
 
 
+def test_check_credentials_without_connection_test():
+    """Test that check_credentials returns proper status without testing connection."""
+    sender = PostmarkEmailSender()
+    result = sender.check_credentials(test_connection=False)
+    
+    # Should have all required keys
+    assert "credentials_set" in result
+    assert "api_token_set" in result
+    assert "sender_email_set" in result
+    assert "connection_valid" in result
+    assert "error" in result
+    
+    # Credentials should be set (since PostmarkEmailSender.__init__ would have raised if not)
+    assert result["credentials_set"] is True
+    assert result["api_token_set"] is True
+    assert result["sender_email_set"] is True
+    
+    # Connection should not be tested
+    assert result["connection_valid"] is None
+    assert result["error"] is None
+
+
+@pytest.mark.flow
+def test_check_credentials_with_connection_test():
+    """Test that check_credentials validates connection to Postmark SMTP server."""
+    sender = PostmarkEmailSender()
+    result = sender.check_credentials(test_connection=True)
+    
+    # Should have all required keys
+    assert "credentials_set" in result
+    assert "api_token_set" in result
+    assert "sender_email_set" in result
+    assert "connection_valid" in result
+    assert "error" in result
+    
+    # Credentials should be set
+    assert result["credentials_set"] is True
+    assert result["api_token_set"] is True
+    assert result["sender_email_set"] is True
+    
+    # Connection should be tested and valid
+    assert result["connection_valid"] is True
+    assert result["error"] is None
+
+
 @pytest.mark.flow
 def test_full_email_flow(client: TacomailClient):
     # Get random email address
