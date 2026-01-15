@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Tacomail CLI - Command-line interface for Tacomail disposable email service."""
 
-from typing import Optional, List
-import asyncio
-import sys
+from typing import Optional
 import re
 from datetime import datetime
 
@@ -11,17 +9,11 @@ import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.json import JSON
-from rich import print as rprint
 
 from tacomail import (
     TacomailClient,
     AsyncTacomailClient,
     Email,
-    EmailAddress,
-    EmailBody,
-    Attachment,
-    Session,
 )
 
 app = typer.Typer(
@@ -239,7 +231,7 @@ def get_email(
                 status = "✓" if att.present else "✗"
                 content += f"  {status} {att.fileName} (ID: {att.id})\n"
 
-        content += f"\n[bold]Body:[/bold]\n"
+        content += "\n[bold]Body:[/bold]\n"
         if email_obj.body.text:
             content += f"\n{email_obj.body.text}\n"
         else:
@@ -343,11 +335,11 @@ def wait(
             )
 
         if email_obj:
-            console.print(f"\n[green]✓ Email received![/green]")
+            console.print("\n[green]✓ Email received![/green]")
             console.print(f"  From: {email_obj.from_.name} <{email_obj.from_.address}>")
             console.print(f"  Subject: {email_obj.subject}")
         else:
-            console.print(f"\n[yellow]⏱ Timeout: No email received[/yellow]")
+            console.print("\n[yellow]⏱ Timeout: No email received[/yellow]")
             raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error waiting for email:[/red] {e}")
