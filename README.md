@@ -13,8 +13,107 @@ An unofficial Python client library for [Tacomail](https://tacomail.de/), a disp
 
 ## Installation
 
+### Standard Installation
 ```bash
 pip install tacomail
+```
+
+### Using uvx (Recommended)
+```bash
+# Install and run CLI without affecting system Python
+uvx tacomail create
+```
+
+## CLI Commands
+
+The tacomail CLI provides comprehensive command-line interface for Tacomail disposable email service. All commands support both sync and async modes via the `--async` flag.
+
+### Available Commands
+
+**Email Generation & Domains**:
+- `tacomail create` - Generate random email address
+- `tacomail list-domains` - List all available Tacomail domains
+
+**Session Management**:
+- `tacomail create-session <email>` - Create API session for receiving emails
+- `tacomail delete-session <email>` - Delete API session
+
+**Inbox Operations**:
+- `tacomail list <email>` - List recent emails in inbox
+- `tacomail get <email> <id>` - Get specific email details
+- `tacomail delete <email> <id>` - Delete specific email
+- `tacomail clear <email>` - Delete all emails from inbox
+
+**Email Waiting**:
+- `tacomail wait <email>` - Wait for new email to arrive
+  - `--timeout <seconds>` - Maximum wait time (default: 30)
+  - `--interval <seconds>` - Check interval (default: 2)
+  - `--filter <pattern>` - Filter by subject/sender (regex)
+
+### Global Options
+
+- `--async` - Use async client instead of sync
+- `--verbose` - Enable verbose/debug output
+- `--help` - Show help message
+
+### Help for Specific Commands
+
+Each command has its own help:
+```bash
+tacomail create --help
+tacomail wait --help
+tacomail list --help
+# etc.
+```
+
+## Quick Start for Receiving Emails
+
+### Basic Workflow (Recommended)
+
+**Step 1**: Generate email address
+```bash
+tacomail create
+# Output: x7k9m2@tacomail.de
+```
+
+**Step 2**: Create session (REQUIRED for receiving emails)
+```bash
+tacomail create-session x7k9m2@tacomail.de
+# Output: Session created, expires at [timestamp]
+```
+
+**Step 3**: Wait for emails
+```bash
+tacomail wait x7k9m2@tacomail.de
+# Monitors inbox and waits for incoming email
+# Displays: From, Subject, Body when email arrives
+```
+
+### Complete Workflow Example
+
+```bash
+# Generate email and create session
+EMAIL=$(tacomail create | grep -oP 'Generated Email:' | cut -d' ' -f2)
+tacomail create-session $EMAIL
+
+# Monitor inbox for incoming emails
+tacomail wait $EMAIL --timeout 60
+```
+
+### Commands Needed for Receiving Emails
+
+To receive emails, you need these commands in order:
+
+1. ✅ `tacomail create` - Generate email address
+2. ✅ `tacomail create-session <email>` - Create session (REQUIRED)
+3. ✅ `tacomail wait <email>` - Monitor inbox for incoming emails
+
+### Optional: Check Inbox
+
+You can check your inbox before waiting:
+```bash
+tacomail list x7k9m2@tacomail.de
+# Shows all emails already in inbox
 ```
 
 ## Quick Start
