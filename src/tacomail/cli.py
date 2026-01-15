@@ -91,6 +91,159 @@ def list_domains() -> None:
 
 
 # Session commands
+@app.command("create-with-session")
+def create_with_session(
+    domain: Optional[str] = typer.Option(
+        None, "--domain", "-d", help="Specific domain to use (otherwise random)"
+    ),
+    username: Optional[str] = typer.Option(
+        None, "--username", "-u", help="Specific username to use (otherwise random)"
+    ),
+) -> None:
+    _create_with_session_impl(domain, username)
+
+
+@app.command("new")
+def new_email_with_session(
+    domain: Optional[str] = typer.Option(
+        None, "--domain", "-d", help="Specific domain to use (otherwise random)"
+    ),
+    username: Optional[str] = typer.Option(
+        None, "--username", "-u", help="Specific username to use (otherwise random)"
+    ),
+) -> None:
+    """Create a random email address and session in one command (alias for 'create-with-session').
+
+    This is a short alias for the 'create-with-session' command.
+    Use 'tacomail new' instead of 'tacomail create-with-session' for convenience.
+
+    Example:
+        tacomail new
+
+    With options:
+        tacomail new --domain tacomail.de
+        tacomail new -u myuser -d tacomail.de
+    """
+    _create_with_session_impl(domain, username)
+
+
+def _create_with_session_impl(
+    domain: Optional[str],
+    username: Optional[str],
+) -> None:
+    """Create a random email address and session in one command.
+
+    This command combines the functionality of 'create' and 'create-session' into a single,
+    convenient operation. It generates a random email address and automatically creates a session
+    for it, eliminating the need to run two separate commands when you want to start receiving
+    emails immediately.
+
+    The command returns both the email address and session information, including the expiration
+    time. This is the most efficient way to set up a temporary email inbox.
+
+    Example:
+        tacomail create-with-session
+
+    With options:
+        tacomail create-with-session --domain tacomail.de
+        tacomail create-with-session --username myuser --domain tacomail.de
+
+    This command works in both sync and async modes (use --async flag for async mode).
+    """
+    client = get_client()
+
+    try:
+        # Handle async mode
+        if use_async:
+            import asyncio
+
+            async def async_operation():
+                # Generate email address
+                nonlocal username
+                if username and domain:
+                    email_address = f"{username}@{domain}"
+                elif domain:
+                    username = await client.get_random_username()
+                    email_address = f"{username}@{domain}"
+                else:
+                    email_address = await client.get_random_address()
+
+                # Parse email for session creation
+                if "@" not in email_address:
+                    console.print(f"[red]Invalid email address generated:[/red] {email_address}")
+                    raise typer.Exit(1)
+
+                user, dom = email_address.split("@", 1)
+
+                # Create session
+                session = await client.create_session(user, dom)
+
+                # Format expiration time (timestamp is in milliseconds)
+                expires_dt = datetime.fromtimestamp(session.expires / 1000)
+                expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+                # Display results
+                console.print(Panel(
+                    f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
+                    f"[bold green]Session Created[/bold green]\n\n"
+                    f"[bold]Expires:[/bold] {expires_str}\n"
+                    f"[bold]Username:[/bold] {session.username}\n"
+                    f"[bold]Domain:[/bold] {session.domain}\n\n"
+                    f"[dim]You can now receive emails at this address![/dim]",
+                    title="✨ Email & Session Ready",
+                    border_style="green"
+                ))
+
+                console.print("\n[bold cyan]Next steps:[/bold cyan]")
+                console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
+                console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
+
+            asyncio.run(async_operation())
+        else:
+            # Generate email address
+            if username and domain:
+                email_address = f"{username}@{domain}"
+            elif domain:
+                username = client.get_random_username()
+                email_address = f"{username}@{domain}"
+            else:
+                email_address = client.get_random_address()
+
+            # Parse email for session creation
+            if "@" not in email_address:
+                console.print(f"[red]Invalid email address generated:[/red] {email_address}")
+                raise typer.Exit(1)
+
+            user, dom = email_address.split("@", 1)
+
+            # Create session
+            session = client.create_session(user, dom)
+
+            # Format expiration time (timestamp is in milliseconds)
+            expires_dt = datetime.fromtimestamp(session.expires / 1000)
+            expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+            # Display results
+            console.print(Panel(
+                f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
+                f"[bold green]Session Created[/bold green]\n\n"
+                f"[bold]Expires:[/bold] {expires_str}\n"
+                f"[bold]Username:[/bold] {session.username}\n"
+                f"[bold]Domain:[/bold] {session.domain}\n\n"
+                f"[dim]You can now receive emails at this address![/dim]",
+                title="✨ Email & Session Ready",
+                border_style="green"
+            ))
+
+            console.print("\n[bold cyan]Next steps:[/bold cyan]")
+            console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
+            console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
+
+    except Exception as e:
+        console.print(f"[red]Error creating email and session:[/red] {e}")
+        raise typer.Exit(1)
+
+
 @app.command()
 def create_session(
     email: str = typer.Argument(..., help="Email address (e.g., user@domain.com)"),
@@ -112,7 +265,7 @@ def create_session(
 
         session = client.create_session(username, domain)
 
-        expires_dt = datetime.fromtimestamp(session.expires)
+        expires_dt = datetime.fromtimestamp(session.expires / 1000)
         expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
 
         console.print(Panel(
