@@ -34,6 +34,7 @@ class PostmarkEmailSender:
                 - sender_email_set (bool): Whether SENDER_EMAIL is set
                 - connection_valid (bool or None): Whether connection to SMTP server succeeded.
                                                    None if test_connection is False.
+                                                   False if credentials are missing and test_connection is True.
                 - error (str or None): Error message if connection test failed
         """
         result = {
@@ -44,15 +45,20 @@ class PostmarkEmailSender:
         }
         result["credentials_set"] = result["api_token_set"] and result["sender_email_set"]
         
-        if test_connection and result["credentials_set"]:
-            try:
-                with smtplib.SMTP(self.SMTP_SERVER, self.SMTP_PORT, timeout=10) as server:
-                    server.starttls()
-                    server.login(self.api_token, self.api_token)
-                    result["connection_valid"] = True
-            except Exception as e:
+        if test_connection:
+            if not result["credentials_set"]:
                 result["connection_valid"] = False
-                result["error"] = str(e)
+                result["error"] = "Missing credentials"
+            else:
+                try:
+                    with smtplib.SMTP(self.SMTP_SERVER, self.SMTP_PORT, timeout=10) as server:
+                        server.starttls()
+                        # Using API token as both username and password (Postmark SMTP authentication)
+                        server.login(self.api_token, self.api_token)
+                        result["connection_valid"] = True
+                except Exception as e:
+                    result["connection_valid"] = False
+                    result["error"] = str(e)
         
         return result
 
