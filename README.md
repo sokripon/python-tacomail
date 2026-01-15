@@ -13,8 +13,207 @@ An unofficial Python client library for [Tacomail](https://tacomail.de/), a disp
 
 ## Installation
 
+### Standard Installation
 ```bash
 pip install tacomail
+```
+
+### Using uvx (Recommended)
+```bash
+# Install and run CLI without affecting system Python
+uvx tacomail create
+```
+
+## CLI Commands
+
+The tacomail CLI provides comprehensive command-line interface for Tacomail disposable email service. All commands support both sync and async modes via the `--async` flag.
+
+### Available Commands
+
+**Email Generation & Domains**:
+- `tacomail create` - Generate random email address
+- `tacomail create-with-session` - Generate email and create session in one command (RECOMMENDED)
+- `tacomail new` - Short alias for 'create-with-session' (RECOMMENDED)
+- `tacomail list-domains` - List all available Tacomail domains
+
+**Session Management**:
+- `tacomail create-session <email>` - Create API session for receiving emails
+- `tacomail delete-session <email>` - Delete API session
+
+**Inbox Operations**:
+- `tacomail list <email>` - List recent emails in inbox
+- `tacomail get <email> <id>` - Get specific email details
+- `tacomail delete <email> <id>` - Delete specific email
+- `tacomail clear <email>` - Delete all emails from inbox
+
+**Email Waiting**:
+- `tacomail wait <email>` - Wait for new email to arrive
+  - `--timeout <seconds>` - Maximum wait time (default: 30)
+  - `--interval <seconds>` - Check interval (default: 2)
+  - `--filter <pattern>` - Filter by subject/sender (regex)
+
+### Global Options
+
+- `--async` - Use async client instead of sync
+- `--verbose` - Enable verbose/debug output
+- `--help` - Show help message
+
+### Help for Specific Commands
+
+Each command has its own help:
+```bash
+tacomail create --help
+tacomail wait --help
+tacomail list --help
+# etc.
+```
+
+## Quick Start for Receiving Emails
+
+### Recommended Workflow (Single Command)
+
+**Quick Start**: Create email and session in one step
+```bash
+tacomail create-with-session
+# Or use the short alias:
+tacomail new
+# Output: Email address and session information with expiration time
+# Example:
+# ╭────────────────────────── ✨ Email & Session Ready ──────────────────────────╮
+# │ Email Address:                                                               │
+# │ x7k9m2@tacomail.de                                                          │
+# │                                                                              │
+# │ Session Created                                                              │
+# │                                                                              │
+# │ Expires: 2026-01-15 23:59:59                                                 │
+# │ Username: x7k9m2                                                             │
+# │ Domain: tacomail.de                                                         │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+**With options**:
+```bash
+# Use specific domain
+tacomail create-with-session --domain tacomail.de
+# Or with the alias:
+tacomail new --domain tacomail.de
+
+# Use specific username and domain
+tacomail create-with-session --username myuser --domain tacomail.de
+# Or with the alias:
+tacomail new -u myuser -d tacomail.de
+
+# Short options
+tacomail create-with-session -d tacomail.de -u myuser
+# Or with the alias:
+tacomail new -d tacomail.de -u myuser
+```
+
+**Using with async mode**:
+```bash
+tacomail --async create-with-session
+# Or with the alias:
+tacomail --async new
+```
+
+**Wait for emails**:
+```bash
+# After creating with session, wait for incoming email
+EMAIL="x7k9m2@tacomail.de"  # Replace with your generated email
+tacomail wait $EMAIL
+# Monitors inbox and waits for incoming email
+# Displays: From, Subject, Body when email arrives
+```
+
+### Alternative: Two-Step Workflow
+
+**Step 1**: Generate email address
+```bash
+tacomail create
+# Output: x7k9m2@tacomail.de
+```
+
+**Step 2**: Create session (REQUIRED for receiving emails)
+```bash
+tacomail create-session x7k9m2@tacomail.de
+# Output: Session created, expires at [timestamp]
+```
+
+**Step 3**: Wait for emails
+```bash
+tacomail wait x7k9m2@tacomail.de
+# Monitors inbox and waits for incoming email
+# Displays: From, Subject, Body when email arrives
+```
+
+### Complete Workflow Example
+
+```bash
+# Generate email and create session
+EMAIL=$(tacomail create | grep -oP 'Generated Email:' | cut -d' ' -f2)
+tacomail create-session $EMAIL
+
+# Monitor inbox for incoming emails
+tacomail wait $EMAIL --timeout 60
+```
+
+### Commands Needed for Receiving Emails
+
+To receive emails, you can use either approach:
+
+#### Quick Method (Recommended)
+1. ✅ `tacomail create-with-session` - Generate email AND create session in one command (or use `tacomail new` - short alias)
+2. ✅ `tacomail wait <email>` - Monitor inbox for incoming emails
+
+#### Step-by-Step Method
+1. ✅ `tacomail create` - Generate email address
+2. ✅ `tacomail create-session <email>` - Create session (REQUIRED)
+3. ✅ `tacomail wait <email>` - Monitor inbox for incoming emails
+
+### Benefits of create-with-session
+
+The `create-with-session` command (and its short alias `new`) provides several advantages:
+
+- **⚡ Faster workflow**: One command instead of two
+- **🎯 Reduced errors**: No need to copy-paste email between commands
+- **📋 Complete information**: Shows both email and session details at once
+- **🔄 Works in both modes**: Supports both sync and async clients
+- **🎨 Better UX**: Clear next steps displayed after creation
+- **⚙️ Flexible options**: Still supports domain and username customization
+
+### Common Workflows
+
+**Workflow 1: Quick setup for testing**
+```bash
+# Create and start receiving emails immediately
+tacomail new  # or: tacomail create-with-session
+tacomail wait <generated-email>
+```
+
+**Workflow 2: Automated script**
+```bash
+#!/bin/bash
+# Get email and session (using the short alias)
+EMAIL=$(tacomail new 2>&1 | grep -oP '\S+@\S+')
+echo "Created: $EMAIL"
+
+# Monitor for emails (timeout 60s)
+tacomail wait $EMAIL --timeout 60
+```
+
+**Workflow 3: Specific domain for testing**
+```bash
+# Use a specific domain if your service requires it
+tacomail new --domain tacomail.de  # or: tacomail create-with-session --domain tacomail.de
+tacomail list <generated-email>
+```
+
+### Optional: Check Inbox
+
+You can check your inbox before waiting:
+```bash
+tacomail list x7k9m2@tacomail.de
+# Shows all emails already in inbox
 ```
 
 ## Quick Start
