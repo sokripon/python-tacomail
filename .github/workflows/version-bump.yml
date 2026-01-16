@@ -1,19 +1,3 @@
-# Version Bump Workflow
-#
-# This workflow updates the version number in pyproject.toml
-#
-# Usage:
-# - Go to Actions tab > Bump Version > Run workflow
-# - Select version bump type: major, minor, or patch
-# - Or specify a custom version number
-#
-# Examples:
-# - Current version: 0.1.0
-# - Patch bump (0.1.0 -> 0.1.1): Select "patch"
-# - Minor bump (0.1.0 -> 0.2.0): Select "minor"
-# - Major bump (0.1.0 -> 1.0.0): Select "major"
-# - Custom (0.1.0 -> 2.5.3): Select "custom" and enter "2.5.3"
-
 name: Bump Version
 
 on:
@@ -66,14 +50,12 @@ jobs:
               echo "Error: Custom version not provided"
               exit 1
             fi
-            # Set custom version
             current_version=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
             sed -i "s/version = \"$current_version\"/version = \"${{ inputs.custom_version }}\"/" pyproject.toml
             git add pyproject.toml
             git commit -m "Bump version to ${{ inputs.custom_version }}"
             echo "NEW_VERSION=${{ inputs.custom_version }}" >> $GITHUB_ENV
           else
-            # Use bump2version for semantic versioning
             bump2version ${{ inputs.bump_type }} --current-version $(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/') --config-file /dev/null --no-tag --no-commit pyproject.toml
             new_version=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
             git add pyproject.toml
