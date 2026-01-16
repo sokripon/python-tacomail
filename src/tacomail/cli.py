@@ -45,9 +45,6 @@ def create(
         None, "--username", "-u", help="Specific username to use (otherwise random)"
     ),
 ) -> None:
-    print_body: bool = typer.Option(
-        False, "--print-body", "-p", help="Also print email body"
-    ),
     """Create a random email address.
 
     Generates a random email address using available domains.
@@ -501,7 +498,7 @@ def wait(
             # Print email body if requested
             if print_body:
                 if email_obj.body.text:
-                    console.print(f"\n[bold]Email Body:[/bold]")
+                    console.print("\n[bold]Email Body:[/bold]")
                     console.print(f"{email_obj.body.text}")
                 else:
                     console.print("\n[dim]No text body available[/dim]")
