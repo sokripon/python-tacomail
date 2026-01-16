@@ -1,5 +1,6 @@
-"""Tests for the Tacomail CLI plain output functionality."""
+"""Tests for the Tacomail CLI output format functionality."""
 
+import json
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
@@ -46,15 +47,15 @@ class TestCreatePlainOutput:
 
     @patch("tacomail.cli.get_client")
     def test_create_plain_output(self, mock_get_client):
-        """Test that create command outputs just the email address in plain mode."""
+        """Test that create command outputs key=value format in plain mode."""
         mock_client = MagicMock()
         mock_client.get_random_address.return_value = "random123@tacomail.de"
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "create"])
+        result = runner.invoke(app, ["--output", "plain", "create"])
 
         assert result.exit_code == 0
-        assert result.stdout.strip() == "random123@tacomail.de"
+        assert "email=random123@tacomail.de" in result.stdout
         # Should not contain Rich formatting
         assert "✨" not in result.stdout
         assert "[bold" not in result.stdout
@@ -66,10 +67,27 @@ class TestCreatePlainOutput:
         mock_client.get_random_username.return_value = "randomuser"
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "create", "-d", "tacomail.de"])
+        result = runner.invoke(app, ["--output", "plain", "create", "-d", "tacomail.de"])
 
         assert result.exit_code == 0
-        assert result.stdout.strip() == "randomuser@tacomail.de"
+        assert "email=randomuser@tacomail.de" in result.stdout
+
+
+class TestCreateJsonOutput:
+    """Tests for the 'create' command JSON output."""
+
+    @patch("tacomail.cli.get_client")
+    def test_create_json_output(self, mock_get_client):
+        """Test that create command outputs JSON format."""
+        mock_client = MagicMock()
+        mock_client.get_random_address.return_value = "random123@tacomail.de"
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "create"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["email"] == "random123@tacomail.de"
 
 
 class TestListDomainsPlainOutput:
@@ -82,7 +100,7 @@ class TestListDomainsPlainOutput:
         mock_client.get_domains.return_value = ["tacomail.de", "example.com", "test.org"]
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "list-domains"])
+        result = runner.invoke(app, ["--output", "plain", "list-domains"])
 
         assert result.exit_code == 0
         lines = result.stdout.strip().split("\n")
@@ -90,6 +108,19 @@ class TestListDomainsPlainOutput:
         # Should not contain Rich formatting
         assert "•" not in result.stdout
         assert "[bold" not in result.stdout
+
+    @patch("tacomail.cli.get_client")
+    def test_list_domains_json_output(self, mock_get_client):
+        """Test that list-domains outputs JSON format."""
+        mock_client = MagicMock()
+        mock_client.get_domains.return_value = ["tacomail.de", "example.com", "test.org"]
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "list-domains"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data == ["tacomail.de", "example.com", "test.org"]
 
 
 class TestCreateSessionPlainOutput:
@@ -102,7 +133,7 @@ class TestCreateSessionPlainOutput:
         mock_client.create_session.return_value = mock_session
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "create-session", "testuser@tacomail.de"])
+        result = runner.invoke(app, ["--output", "plain", "create-session", "testuser@tacomail.de"])
 
         assert result.exit_code == 0
         lines = result.stdout.strip().split("\n")
@@ -112,6 +143,22 @@ class TestCreateSessionPlainOutput:
         assert any(line.startswith("expires=") for line in lines)
         # Should not contain Rich formatting
         assert "🔐" not in result.stdout
+
+    @patch("tacomail.cli.get_client")
+    def test_create_session_json_output(self, mock_get_client, mock_session):
+        """Test that create-session outputs JSON format."""
+        mock_client = MagicMock()
+        mock_client.create_session.return_value = mock_session
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "create-session", "testuser@tacomail.de"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["email"] == "testuser@tacomail.de"
+        assert data["username"] == "testuser"
+        assert data["domain"] == "tacomail.de"
+        assert "expires" in data
 
 
 class TestDeleteSessionPlainOutput:
@@ -123,12 +170,24 @@ class TestDeleteSessionPlainOutput:
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "delete-session", "testuser@tacomail.de"])
+        result = runner.invoke(app, ["--output", "plain", "delete-session", "testuser@tacomail.de"])
 
         assert result.exit_code == 0
         assert result.stdout.strip() == "deleted=testuser@tacomail.de"
         # Should not contain Rich formatting
         assert "✓" not in result.stdout
+
+    @patch("tacomail.cli.get_client")
+    def test_delete_session_json_output(self, mock_get_client):
+        """Test that delete-session outputs JSON format."""
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "delete-session", "testuser@tacomail.de"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["deleted"] == "testuser@tacomail.de"
 
 
 class TestListInboxPlainOutput:
@@ -141,7 +200,7 @@ class TestListInboxPlainOutput:
         mock_client.get_inbox.return_value = [mock_email]
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "list", "testuser@tacomail.de"])
+        result = runner.invoke(app, ["--output", "plain", "list", "testuser@tacomail.de"])
 
         assert result.exit_code == 0
         # Output should be tab-separated: id, from_address, subject, date
@@ -159,10 +218,26 @@ class TestListInboxPlainOutput:
         mock_client.get_inbox.return_value = []
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "list", "testuser@tacomail.de"])
+        result = runner.invoke(app, ["--output", "plain", "list", "testuser@tacomail.de"])
 
         assert result.exit_code == 0
         assert result.stdout.strip() == ""
+
+    @patch("tacomail.cli.get_client")
+    def test_list_inbox_json_output(self, mock_get_client, mock_email):
+        """Test that list outputs JSON format."""
+        mock_client = MagicMock()
+        mock_client.get_inbox.return_value = [mock_email]
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "list", "testuser@tacomail.de"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert data[0]["id"] == "test-email-id-123"
+        assert data[0]["from"] == "sender@example.com"
 
 
 class TestGetEmailPlainOutput:
@@ -175,7 +250,7 @@ class TestGetEmailPlainOutput:
         mock_client.get_email.return_value = mock_email
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "get", "testuser@tacomail.de", "email-id"])
+        result = runner.invoke(app, ["--output", "plain", "get", "testuser@tacomail.de", "email-id"])
 
         assert result.exit_code == 0
         lines = result.stdout.strip().split("\n")
@@ -189,6 +264,22 @@ class TestGetEmailPlainOutput:
         # Should not contain Rich formatting
         assert "📧" not in result.stdout
 
+    @patch("tacomail.cli.get_client")
+    def test_get_email_json_output(self, mock_get_client, mock_email):
+        """Test that get outputs JSON format."""
+        mock_client = MagicMock()
+        mock_client.get_email.return_value = mock_email
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "get", "testuser@tacomail.de", "email-id"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["id"] == "test-email-id-123"
+        assert data["from"] == "sender@example.com"
+        assert data["subject"] == "Test Subject"
+        assert data["body"] == "This is the email body."
+
 
 class TestDeleteEmailPlainOutput:
     """Tests for the 'delete' command plain output."""
@@ -199,10 +290,22 @@ class TestDeleteEmailPlainOutput:
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "delete", "testuser@tacomail.de", "email-id-123"])
+        result = runner.invoke(app, ["--output", "plain", "delete", "testuser@tacomail.de", "email-id-123"])
 
         assert result.exit_code == 0
         assert result.stdout.strip() == "deleted=email-id-123"
+
+    @patch("tacomail.cli.get_client")
+    def test_delete_email_json_output(self, mock_get_client):
+        """Test that delete outputs JSON format."""
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "delete", "testuser@tacomail.de", "email-id-123"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["deleted"] == "email-id-123"
 
 
 class TestClearInboxPlainOutput:
@@ -214,10 +317,22 @@ class TestClearInboxPlainOutput:
         mock_client = MagicMock()
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "clear", "testuser@tacomail.de"])
+        result = runner.invoke(app, ["--output", "plain", "clear", "testuser@tacomail.de"])
 
         assert result.exit_code == 0
         assert result.stdout.strip() == "cleared=testuser@tacomail.de"
+
+    @patch("tacomail.cli.get_client")
+    def test_clear_inbox_json_output(self, mock_get_client):
+        """Test that clear outputs JSON format."""
+        mock_client = MagicMock()
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "clear", "testuser@tacomail.de"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["cleared"] == "testuser@tacomail.de"
 
 
 class TestWaitPlainOutput:
@@ -230,7 +345,7 @@ class TestWaitPlainOutput:
         mock_client.wait_for_email.return_value = mock_email
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "wait", "testuser@tacomail.de", "-t", "1"])
+        result = runner.invoke(app, ["--output", "plain", "wait", "testuser@tacomail.de", "-t", "1"])
 
         assert result.exit_code == 0
         lines = result.stdout.strip().split("\n")
@@ -242,15 +357,15 @@ class TestWaitPlainOutput:
 
     @patch("tacomail.cli.get_client")
     def test_wait_plain_output_timeout(self, mock_get_client):
-        """Test that wait outputs timeout=true in plain mode when no email."""
+        """Test that wait outputs timeout=True in plain mode when no email."""
         mock_client = MagicMock()
         mock_client.wait_for_email.return_value = None
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "wait", "testuser@tacomail.de", "-t", "1"])
+        result = runner.invoke(app, ["--output", "plain", "wait", "testuser@tacomail.de", "-t", "1"])
 
         assert result.exit_code == 1
-        assert "timeout=true" in result.stdout
+        assert "timeout=True" in result.stdout
 
     @patch("tacomail.cli.get_client")
     def test_wait_plain_output_with_body(self, mock_get_client, mock_email):
@@ -259,11 +374,39 @@ class TestWaitPlainOutput:
         mock_client.wait_for_email.return_value = mock_email
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "wait", "testuser@tacomail.de", "-t", "1", "--print-body"])
+        result = runner.invoke(app, ["--output", "plain", "wait", "testuser@tacomail.de", "-t", "1", "--print-body"])
 
         assert result.exit_code == 0
         lines = result.stdout.strip().split("\n")
         assert "body=This is the email body." in lines
+
+    @patch("tacomail.cli.get_client")
+    def test_wait_json_output_success(self, mock_get_client, mock_email):
+        """Test that wait outputs JSON format when email received."""
+        mock_client = MagicMock()
+        mock_client.wait_for_email.return_value = mock_email
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "wait", "testuser@tacomail.de", "-t", "1"])
+
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["id"] == "test-email-id-123"
+        assert data["from"] == "sender@example.com"
+        assert data["subject"] == "Test Subject"
+
+    @patch("tacomail.cli.get_client")
+    def test_wait_json_output_timeout(self, mock_get_client):
+        """Test that wait outputs JSON format on timeout."""
+        mock_client = MagicMock()
+        mock_client.wait_for_email.return_value = None
+        mock_get_client.return_value = mock_client
+
+        result = runner.invoke(app, ["--output", "json", "wait", "testuser@tacomail.de", "-t", "1"])
+
+        assert result.exit_code == 1
+        data = json.loads(result.stdout.strip())
+        assert data["timeout"] is True
 
 
 class TestCreateWithSessionPlainOutput:
@@ -277,7 +420,7 @@ class TestCreateWithSessionPlainOutput:
         mock_client.create_session.return_value = mock_session
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "create-with-session"])
+        result = runner.invoke(app, ["--output", "plain", "create-with-session"])
 
         assert result.exit_code == 0
         lines = result.stdout.strip().split("\n")
@@ -297,21 +440,40 @@ class TestCreateWithSessionPlainOutput:
         mock_client.create_session.return_value = mock_session
         mock_get_client.return_value = mock_client
 
-        result = runner.invoke(app, ["--plain", "new"])
+        result = runner.invoke(app, ["--output", "plain", "new"])
 
         assert result.exit_code == 0
         lines = result.stdout.strip().split("\n")
         assert "email=random123@tacomail.de" in lines
 
+    @patch("tacomail.cli.get_client")
+    def test_create_with_session_json_output(self, mock_get_client, mock_session):
+        """Test that create-with-session outputs JSON format."""
+        mock_client = MagicMock()
+        mock_client.get_random_address.return_value = "random123@tacomail.de"
+        mock_client.create_session.return_value = mock_session
+        mock_get_client.return_value = mock_client
 
-class TestPlainOptionHelp:
-    """Test that the --plain option is properly documented."""
+        result = runner.invoke(app, ["--output", "json", "create-with-session"])
 
-    def test_plain_option_in_help(self):
-        """Test that --plain option appears in CLI help."""
+        assert result.exit_code == 0
+        data = json.loads(result.stdout.strip())
+        assert data["email"] == "random123@tacomail.de"
+        assert data["username"] == "testuser"
+        assert data["domain"] == "tacomail.de"
+        assert "expires" in data
+
+
+class TestOutputOptionHelp:
+    """Test that the --output option is properly documented."""
+
+    def test_output_option_in_help(self):
+        """Test that --output option appears in CLI help."""
         result = runner.invoke(app, ["--help"])
 
         assert result.exit_code == 0
-        # Output may contain ANSI escape codes, so search for "plain" which should appear
+        # Output may contain ANSI escape codes, so search for keywords
+        assert "output" in result.stdout.lower()
+        assert "json" in result.stdout.lower()
         assert "plain" in result.stdout.lower()
-        assert "easy parsing" in result.stdout.lower() or "parsing" in result.stdout.lower()
+        assert "rich" in result.stdout.lower()
