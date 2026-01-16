@@ -170,17 +170,6 @@ To receive emails, you can use either approach:
 2. ✅ `tacomail create-session <email>` - Create session (REQUIRED)
 3. ✅ `tacomail wait <email>` - Monitor inbox for incoming emails
 
-### Benefits of create-with-session
-
-The `create-with-session` command (and its short alias `new`) provides several advantages:
-
-- **⚡ Faster workflow**: One command instead of two
-- **🎯 Reduced errors**: No need to copy-paste email between commands
-- **📋 Complete information**: Shows both email and session details at once
-- **🔄 Works in both modes**: Supports both sync and async clients
-- **🎨 Better UX**: Clear next steps displayed after creation
-- **⚙️ Flexible options**: Still supports domain and username customization
-
 ### Common Workflows
 
 **Workflow 1: Quick setup for testing**
