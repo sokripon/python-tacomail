@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tacomail CLI - Command-line interface for Tacomail disposable email service."""
 
-from typing import Optional, Any
+from typing import Optional, Any, Callable
 from enum import Enum
 import re
 import json
@@ -39,7 +39,7 @@ use_async = False
 output_format: OutputFormat = OutputFormat.RICH
 
 
-def output_data(data: dict[str, Any] | list[Any], rich_callback: callable) -> None:
+def output_data(data: dict[str, Any] | list[Any], rich_callback: Callable[[], None]) -> None:
     """Output data in the configured format.
 
     Args:
