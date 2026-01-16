@@ -45,6 +45,9 @@ def create(
         None, "--username", "-u", help="Specific username to use (otherwise random)"
     ),
 ) -> None:
+    print_body: bool = typer.Option(
+        False, "--print-body", "-p", help="Also print email body"
+    ),
     """Create a random email address.
 
     Generates a random email address using available domains.
@@ -452,6 +455,9 @@ def wait(
     filter_pattern: Optional[str] = typer.Option(
         None, "--filter", "-f", help="Filter by subject or sender (regex pattern)"
     ),
+    print_body: bool = typer.Option(
+        False, "--print-body", "-p", help="Also print email body"
+    ),
 ) -> None:
     """Wait for a new email to arrive.
 
@@ -491,6 +497,14 @@ def wait(
             console.print("\n[green]✓ Email received![/green]")
             console.print(f"  From: {email_obj.from_.name} <{email_obj.from_.address}>")
             console.print(f"  Subject: {email_obj.subject}")
+
+            # Print email body if requested
+            if print_body:
+                if email_obj.body.text:
+                    console.print(f"\n[bold]Email Body:[/bold]")
+                    console.print(f"{email_obj.body.text}")
+                else:
+                    console.print("\n[dim]No text body available[/dim]")
         else:
             console.print("\n[yellow]⏱ Timeout: No email received[/yellow]")
             raise typer.Exit(1)
