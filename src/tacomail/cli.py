@@ -24,8 +24,9 @@ app = typer.Typer(
 
 console = Console()
 
-# Global option for async mode
+# Global options
 use_async = False
+use_plain = False
 
 
 def get_client():
@@ -61,11 +62,14 @@ def create(
         else:
             email_address = client.get_random_address()
 
-        console.print(Panel(
-            f"[bold green]Generated Email:[/bold green]\n{email_address}",
-            title="✨ Success",
-            border_style="green"
-        ))
+        if use_plain:
+            print(email_address)
+        else:
+            console.print(Panel(
+                f"[bold green]Generated Email:[/bold green]\n{email_address}",
+                title="✨ Success",
+                border_style="green"
+            ))
     except Exception as e:
         console.print(f"[red]Error creating email:[/red] {e}")
         raise typer.Exit(1)
@@ -82,9 +86,13 @@ def list_domains() -> None:
     try:
         domains = client.get_domains()
 
-        console.print(f"\n[bold]Available Domains:[/bold] ({len(domains)})")
-        for domain in domains:
-            console.print(f"  • {domain}")
+        if use_plain:
+            for domain in domains:
+                print(domain)
+        else:
+            console.print(f"\n[bold]Available Domains:[/bold] ({len(domains)})")
+            for domain in domains:
+                console.print(f"  • {domain}")
     except Exception as e:
         console.print(f"[red]Error fetching domains:[/red] {e}")
         raise typer.Exit(1)
@@ -183,20 +191,26 @@ def _create_with_session_impl(
                 expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
 
                 # Display results
-                console.print(Panel(
-                    f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
-                    f"[bold green]Session Created[/bold green]\n\n"
-                    f"[bold]Expires:[/bold] {expires_str}\n"
-                    f"[bold]Username:[/bold] {session.username}\n"
-                    f"[bold]Domain:[/bold] {session.domain}\n\n"
-                    f"[dim]You can now receive emails at this address![/dim]",
-                    title="✨ Email & Session Ready",
-                    border_style="green"
-                ))
+                if use_plain:
+                    print(f"email={email_address}")
+                    print(f"username={session.username}")
+                    print(f"domain={session.domain}")
+                    print(f"expires={expires_str}")
+                else:
+                    console.print(Panel(
+                        f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
+                        f"[bold green]Session Created[/bold green]\n\n"
+                        f"[bold]Expires:[/bold] {expires_str}\n"
+                        f"[bold]Username:[/bold] {session.username}\n"
+                        f"[bold]Domain:[/bold] {session.domain}\n\n"
+                        f"[dim]You can now receive emails at this address![/dim]",
+                        title="✨ Email & Session Ready",
+                        border_style="green"
+                    ))
 
-                console.print("\n[bold cyan]Next steps:[/bold cyan]")
-                console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
-                console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
+                    console.print("\n[bold cyan]Next steps:[/bold cyan]")
+                    console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
+                    console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
 
             asyncio.run(async_operation())
         else:
@@ -224,20 +238,26 @@ def _create_with_session_impl(
             expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
 
             # Display results
-            console.print(Panel(
-                f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
-                f"[bold green]Session Created[/bold green]\n\n"
-                f"[bold]Expires:[/bold] {expires_str}\n"
-                f"[bold]Username:[/bold] {session.username}\n"
-                f"[bold]Domain:[/bold] {session.domain}\n\n"
-                f"[dim]You can now receive emails at this address![/dim]",
-                title="✨ Email & Session Ready",
-                border_style="green"
-            ))
+            if use_plain:
+                print(f"email={email_address}")
+                print(f"username={session.username}")
+                print(f"domain={session.domain}")
+                print(f"expires={expires_str}")
+            else:
+                console.print(Panel(
+                    f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
+                    f"[bold green]Session Created[/bold green]\n\n"
+                    f"[bold]Expires:[/bold] {expires_str}\n"
+                    f"[bold]Username:[/bold] {session.username}\n"
+                    f"[bold]Domain:[/bold] {session.domain}\n\n"
+                    f"[dim]You can now receive emails at this address![/dim]",
+                    title="✨ Email & Session Ready",
+                    border_style="green"
+                ))
 
-            console.print("\n[bold cyan]Next steps:[/bold cyan]")
-            console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
-            console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
+                console.print("\n[bold cyan]Next steps:[/bold cyan]")
+                console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
+                console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
 
     except Exception as e:
         console.print(f"[red]Error creating email and session:[/red] {e}")
@@ -268,15 +288,21 @@ def create_session(
         expires_dt = datetime.fromtimestamp(session.expires / 1000)
         expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        console.print(Panel(
-            f"[bold green]Session Created[/bold green]\n\n"
-            f"Email: {email}\n"
-            f"Expires: {expires_str}\n"
-            f"Username: {session.username}\n"
-            f"Domain: {session.domain}",
-            title="🔐 Session",
-            border_style="green"
-        ))
+        if use_plain:
+            print(f"email={email}")
+            print(f"username={session.username}")
+            print(f"domain={session.domain}")
+            print(f"expires={expires_str}")
+        else:
+            console.print(Panel(
+                f"[bold green]Session Created[/bold green]\n\n"
+                f"Email: {email}\n"
+                f"Expires: {expires_str}\n"
+                f"Username: {session.username}\n"
+                f"Domain: {session.domain}",
+                title="🔐 Session",
+                border_style="green"
+            ))
     except Exception as e:
         console.print(f"[red]Error creating session:[/red] {e}")
         raise typer.Exit(1)
@@ -302,7 +328,10 @@ def delete_session(
 
         client.delete_session(username, domain)
 
-        console.print(f"[green]✓ Session deleted for {email}[/green]")
+        if use_plain:
+            print(f"deleted={email}")
+        else:
+            console.print(f"[green]✓ Session deleted for {email}[/green]")
     except Exception as e:
         console.print(f"[red]Error deleting session:[/red] {e}")
         raise typer.Exit(1)
@@ -327,24 +356,32 @@ def list_inbox(
         emails = client.get_inbox(email, limit=limit)
 
         if not emails:
+            if use_plain:
+                return
             console.print(f"[yellow]No emails found for {email}[/yellow]")
             return
 
-        table = Table(title=f"Inbox for {email}")
-        table.add_column("ID", style="cyan", no_wrap=True)
-        table.add_column("From", style="green")
-        table.add_column("Subject", style="white")
-        table.add_column("Date", style="blue")
+        if use_plain:
+            # Tab-separated output: id, from_address, subject, date
+            for email_obj in emails:
+                date_str = email_obj.date.strftime("%Y-%m-%d %H:%M")
+                print(f"{email_obj.id}\t{email_obj.from_.address}\t{email_obj.subject}\t{date_str}")
+        else:
+            table = Table(title=f"Inbox for {email}")
+            table.add_column("ID", style="cyan", no_wrap=True)
+            table.add_column("From", style="green")
+            table.add_column("Subject", style="white")
+            table.add_column("Date", style="blue")
 
-        for email_obj in emails:
-            from_addr = f"{email_obj.from_.name} <{email_obj.from_.address}>"
-            subject = email_obj.subject[:50] + "..." if len(email_obj.subject) > 50 else email_obj.subject
-            date_str = email_obj.date.strftime("%Y-%m-%d %H:%M")
+            for email_obj in emails:
+                from_addr = f"{email_obj.from_.name} <{email_obj.from_.address}>"
+                subject = email_obj.subject[:50] + "..." if len(email_obj.subject) > 50 else email_obj.subject
+                date_str = email_obj.date.strftime("%Y-%m-%d %H:%M")
 
-            table.add_row(email_obj.id, from_addr, subject, date_str)
+                table.add_row(email_obj.id, from_addr, subject, date_str)
 
-        console.print(table)
-        console.print(f"\n[dim]Showing {len(emails)} email(s)[/dim]")
+            console.print(table)
+            console.print(f"\n[dim]Showing {len(emails)} email(s)[/dim]")
     except Exception as e:
         console.print(f"[red]Error listing inbox:[/red] {e}")
         raise typer.Exit(1)
@@ -369,7 +406,21 @@ def get_email(
         to_addr = f"{email_obj.to.name} <{email_obj.to.address}>"
         date_str = email_obj.date.strftime("%Y-%m-%d %H:%M:%S")
 
-        content = f"""
+        if use_plain:
+            print(f"id={email_obj.id}")
+            print(f"from={email_obj.from_.address}")
+            print(f"from_name={email_obj.from_.name}")
+            print(f"to={email_obj.to.address}")
+            print(f"to_name={email_obj.to.name}")
+            print(f"subject={email_obj.subject}")
+            print(f"date={date_str}")
+            print(f"attachments={len(email_obj.attachments)}")
+            if email_obj.attachments:
+                for att in email_obj.attachments:
+                    print(f"attachment={att.fileName}")
+            print(f"body={email_obj.body.text or ''}")
+        else:
+            content = f"""
 [bold]From:[/bold] {from_addr}
 [bold]To:[/bold] {to_addr}
 [bold]Subject:[/bold] {email_obj.subject}
@@ -379,18 +430,18 @@ def get_email(
 [bold]Attachments:[/bold] {len(email_obj.attachments)} file(s)
 """
 
-        if email_obj.attachments:
-            for att in email_obj.attachments:
-                status = "✓" if att.present else "✗"
-                content += f"  {status} {att.fileName} (ID: {att.id})\n"
+            if email_obj.attachments:
+                for att in email_obj.attachments:
+                    status = "✓" if att.present else "✗"
+                    content += f"  {status} {att.fileName} (ID: {att.id})\n"
 
-        content += "\n[bold]Body:[/bold]\n"
-        if email_obj.body.text:
-            content += f"\n{email_obj.body.text}\n"
-        else:
-            content += "[dim](No text body)[/dim]\n"
+            content += "\n[bold]Body:[/bold]\n"
+            if email_obj.body.text:
+                content += f"\n{email_obj.body.text}\n"
+            else:
+                content += "[dim](No text body)[/dim]\n"
 
-        console.print(Panel(content.strip(), title="📧 Email", border_style="blue"))
+            console.print(Panel(content.strip(), title="📧 Email", border_style="blue"))
     except Exception as e:
         console.print(f"[red]Error getting email:[/red] {e}")
         raise typer.Exit(1)
@@ -409,7 +460,10 @@ def delete_email(
 
     try:
         client.delete_email(email, mail_id)
-        console.print(f"[green]✓ Email {mail_id} deleted[/green]")
+        if use_plain:
+            print(f"deleted={mail_id}")
+        else:
+            console.print(f"[green]✓ Email {mail_id} deleted[/green]")
     except Exception as e:
         console.print(f"[red]Error deleting email:[/red] {e}")
         raise typer.Exit(1)
@@ -429,11 +483,14 @@ def clear_inbox(
     client = get_client()
 
     try:
-        if not confirm:
+        if not confirm and not use_plain:
             typer.confirm(f"Delete all emails from {email}?", abort=True)
 
         client.delete_inbox(email)
-        console.print(f"[green]✓ Inbox cleared for {email}[/green]")
+        if use_plain:
+            print(f"cleared={email}")
+        else:
+            console.print(f"[green]✓ Inbox cleared for {email}[/green]")
     except Exception as e:
         console.print(f"[red]Error clearing inbox:[/red] {e}")
         raise typer.Exit(1)
@@ -453,7 +510,7 @@ def wait(
         None, "--filter", "-f", help="Filter by subject or sender (regex pattern)"
     ),
     print_body: bool = typer.Option(
-        False, "--print-body", "-p", help="Also print email body"
+        False, "--print-body", "-b", help="Also print email body"
     ),
 ) -> None:
     """Wait for a new email to arrive.
@@ -464,7 +521,8 @@ def wait(
     client = get_client()
 
     try:
-        console.print(f"[dim]Waiting for email to {email}... (timeout: {timeout}s)[/dim]")
+        if not use_plain:
+            console.print(f"[dim]Waiting for email to {email}... (timeout: {timeout}s)[/dim]")
 
         if filter_pattern:
             # Create filter function
@@ -491,19 +549,32 @@ def wait(
             )
 
         if email_obj:
-            console.print("\n[green]✓ Email received![/green]")
-            console.print(f"  From: {email_obj.from_.name} <{email_obj.from_.address}>")
-            console.print(f"  Subject: {email_obj.subject}")
+            if use_plain:
+                date_str = email_obj.date.strftime("%Y-%m-%d %H:%M:%S")
+                print(f"id={email_obj.id}")
+                print(f"from={email_obj.from_.address}")
+                print(f"from_name={email_obj.from_.name}")
+                print(f"subject={email_obj.subject}")
+                print(f"date={date_str}")
+                if print_body:
+                    print(f"body={email_obj.body.text or ''}")
+            else:
+                console.print("\n[green]✓ Email received![/green]")
+                console.print(f"  From: {email_obj.from_.name} <{email_obj.from_.address}>")
+                console.print(f"  Subject: {email_obj.subject}")
 
-            # Print email body if requested
-            if print_body:
-                if email_obj.body.text:
-                    console.print("\n[bold]Email Body:[/bold]")
-                    console.print(f"{email_obj.body.text}")
-                else:
-                    console.print("\n[dim]No text body available[/dim]")
+                # Print email body if requested
+                if print_body:
+                    if email_obj.body.text:
+                        console.print("\n[bold]Email Body:[/bold]")
+                        console.print(f"{email_obj.body.text}")
+                    else:
+                        console.print("\n[dim]No text body available[/dim]")
         else:
-            console.print("\n[yellow]⏱ Timeout: No email received[/yellow]")
+            if use_plain:
+                print("timeout=true")
+            else:
+                console.print("\n[yellow]⏱ Timeout: No email received[/yellow]")
             raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error waiting for email:[/red] {e}")
@@ -518,10 +589,14 @@ def main(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
     ),
+    plain: bool = typer.Option(
+        False, "--plain", "-p", help="Output in plain format for easy parsing"
+    ),
 ) -> None:
     """Tacomail CLI - Disposable email service command-line interface."""
-    global use_async
+    global use_async, use_plain
     use_async = async_mode
+    use_plain = plain
 
     if verbose:
         import logging
