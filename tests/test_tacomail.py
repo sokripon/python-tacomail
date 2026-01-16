@@ -66,6 +66,7 @@ def test_fetch_empty_inbox(client: TacomailClient):
     assert len(emails) == 0
 
 
+@pytest.mark.flow
 def test_email_sender_initialization():
     sender = PostmarkEmailSender()
     assert sender.api_token is not None
