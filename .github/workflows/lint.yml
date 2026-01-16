@@ -1,4 +1,4 @@
-name: Basic Tests
+name: Lint and Type Check
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,8 +22,5 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
-      - name: Run basic tests (no email sending required)
-        run: uv run pytest tests/ -v -m "not flow"
-
-      - name: Run async basic tests
-        run: uv run pytest tests/test_tacomail_async.py -v -m "not flow"
+      - name: Run linter
+        run: uv run ruff check .

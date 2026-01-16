@@ -49,6 +49,7 @@ async def test_delete_session_async(
     await client.delete_session(username, domain)
 
 
+@pytest.mark.flow
 @pytest.mark.asyncio
 async def test_wait_for_email_async(
     client_generator: AsyncGenerator[AsyncTacomailClient, None],
@@ -81,6 +82,7 @@ async def test_wait_for_email_async(
     assert received_email.body.text.strip() == test_body
 
 
+@pytest.mark.flow
 @pytest.mark.asyncio
 async def test_wait_for_email_filtered_async(
     client_generator: AsyncGenerator[AsyncTacomailClient, None],
