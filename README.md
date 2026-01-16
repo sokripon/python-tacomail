@@ -54,9 +54,41 @@ The tacomail CLI provides comprehensive command-line interface for Tacomail disp
 
 ### Global Options
 
+- `--output`, `-o` - Output format: `rich` (default), `plain`, or `json`
 - `--async` - Use async client instead of sync
 - `--verbose` - Enable verbose/debug output
 - `--help` - Show help message
+
+### Output Formats
+
+The CLI supports three output formats via the `--output` option:
+
+**Rich (default)**: Beautiful formatted output with colors and panels
+```bash
+tacomail create
+# ╭────────────── ✨ Success ──────────────╮
+# │ Generated Email:                       │
+# │ x7k9m2@tacomail.de                     │
+# ╰────────────────────────────────────────╯
+```
+
+**Plain**: Simple key=value format for shell scripting
+```bash
+tacomail --output plain create
+# email=x7k9m2@tacomail.de
+
+tacomail -o plain list user@tacomail.de
+# id123	sender@example.com	Subject Line	2026-01-15 10:30
+```
+
+**JSON**: Machine-readable JSON output
+```bash
+tacomail --output json create
+# {"email": "x7k9m2@tacomail.de"}
+
+tacomail -o json list user@tacomail.de
+# [{"id": "id123", "from": "sender@example.com", "subject": "Subject Line", "date": "2026-01-15 10:30"}]
+```
 
 ### Help for Specific Commands
 
@@ -149,9 +181,8 @@ tacomail wait x7k9m2@tacomail.de
 ### Complete Workflow Example
 
 ```bash
-# Generate email and create session
-EMAIL=$(tacomail create | grep -oP 'Generated Email:' | cut -d' ' -f2)
-tacomail create-session $EMAIL
+# Generate email and create session (using plain output for easy parsing)
+EMAIL=$(tacomail -o plain new | grep '^email=' | cut -d'=' -f2)
 
 # Monitor inbox for incoming emails
 tacomail wait $EMAIL --timeout 60
@@ -182,8 +213,12 @@ tacomail wait <generated-email>
 **Workflow 2: Automated script**
 ```bash
 #!/bin/bash
-# Get email and session (using the short alias)
-EMAIL=$(tacomail new 2>&1 | grep -oP '\S+@\S+')
+# Get email and session using plain output (easy to parse)
+EMAIL=$(tacomail -o plain new | grep '^email=' | cut -d'=' -f2)
+echo "Created: $EMAIL"
+
+# Or using JSON output with jq
+EMAIL=$(tacomail -o json new | jq -r '.email')
 echo "Created: $EMAIL"
 
 # Monitor for emails (timeout 60s)

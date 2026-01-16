@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Tacomail CLI - Command-line interface for Tacomail disposable email service."""
 
-from typing import Optional
+from typing import Optional, Any, Callable
+from enum import Enum
 import re
+import json
 from datetime import datetime
 
 import typer
@@ -16,6 +18,14 @@ from tacomail import (
     Email,
 )
 
+
+class OutputFormat(str, Enum):
+    """Output format options for CLI commands."""
+    RICH = "rich"
+    PLAIN = "plain"
+    JSON = "json"
+
+
 app = typer.Typer(
     name="tacomail",
     help="Tacomail CLI - Disposable email service command-line interface",
@@ -24,8 +34,33 @@ app = typer.Typer(
 
 console = Console()
 
-# Global option for async mode
+# Global options
 use_async = False
+output_format: OutputFormat = OutputFormat.RICH
+
+
+def output_data(data: dict[str, Any] | list[Any], rich_callback: Callable[[], None]) -> None:
+    """Output data in the configured format.
+
+    Args:
+        data: The data to output (dict for single items, list for multiple items)
+        rich_callback: A callback function to render rich output (only called for RICH format)
+    """
+    if output_format == OutputFormat.JSON:
+        print(json.dumps(data, default=str))
+    elif output_format == OutputFormat.PLAIN:
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict):
+                    # For list of dicts, output tab-separated values
+                    print("\t".join(str(v) for v in item.values()))
+                else:
+                    print(item)
+        else:
+            for key, value in data.items():
+                print(f"{key}={value}")
+    else:
+        rich_callback()
 
 
 def get_client():
@@ -61,11 +96,14 @@ def create(
         else:
             email_address = client.get_random_address()
 
-        console.print(Panel(
-            f"[bold green]Generated Email:[/bold green]\n{email_address}",
-            title="✨ Success",
-            border_style="green"
-        ))
+        def rich_output():
+            console.print(Panel(
+                f"[bold green]Generated Email:[/bold green]\n{email_address}",
+                title="✨ Success",
+                border_style="green"
+            ))
+
+        output_data({"email": email_address}, rich_output)
     except Exception as e:
         console.print(f"[red]Error creating email:[/red] {e}")
         raise typer.Exit(1)
@@ -82,9 +120,12 @@ def list_domains() -> None:
     try:
         domains = client.get_domains()
 
-        console.print(f"\n[bold]Available Domains:[/bold] ({len(domains)})")
-        for domain in domains:
-            console.print(f"  • {domain}")
+        def rich_output():
+            console.print(f"\n[bold]Available Domains:[/bold] ({len(domains)})")
+            for domain in domains:
+                console.print(f"  • {domain}")
+
+        output_data(domains, rich_output)
     except Exception as e:
         console.print(f"[red]Error fetching domains:[/red] {e}")
         raise typer.Exit(1)
@@ -152,6 +193,33 @@ def _create_with_session_impl(
     """
     client = get_client()
 
+    def display_results(email_address: str, session, expires_str: str) -> None:
+        """Display the results using the configured output format."""
+        data = {
+            "email": email_address,
+            "username": session.username,
+            "domain": session.domain,
+            "expires": expires_str,
+        }
+
+        def rich_output():
+            console.print(Panel(
+                f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
+                f"[bold green]Session Created[/bold green]\n\n"
+                f"[bold]Expires:[/bold] {expires_str}\n"
+                f"[bold]Username:[/bold] {session.username}\n"
+                f"[bold]Domain:[/bold] {session.domain}\n\n"
+                f"[dim]You can now receive emails at this address![/dim]",
+                title="✨ Email & Session Ready",
+                border_style="green"
+            ))
+
+            console.print("\n[bold cyan]Next steps:[/bold cyan]")
+            console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
+            console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
+
+        output_data(data, rich_output)
+
     try:
         # Handle async mode
         if use_async:
@@ -182,21 +250,7 @@ def _create_with_session_impl(
                 expires_dt = datetime.fromtimestamp(session.expires / 1000)
                 expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-                # Display results
-                console.print(Panel(
-                    f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
-                    f"[bold green]Session Created[/bold green]\n\n"
-                    f"[bold]Expires:[/bold] {expires_str}\n"
-                    f"[bold]Username:[/bold] {session.username}\n"
-                    f"[bold]Domain:[/bold] {session.domain}\n\n"
-                    f"[dim]You can now receive emails at this address![/dim]",
-                    title="✨ Email & Session Ready",
-                    border_style="green"
-                ))
-
-                console.print("\n[bold cyan]Next steps:[/bold cyan]")
-                console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
-                console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
+                display_results(email_address, session, expires_str)
 
             asyncio.run(async_operation())
         else:
@@ -223,21 +277,7 @@ def _create_with_session_impl(
             expires_dt = datetime.fromtimestamp(session.expires / 1000)
             expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-            # Display results
-            console.print(Panel(
-                f"[bold green]Email Address:[/bold green]\n{email_address}\n\n"
-                f"[bold green]Session Created[/bold green]\n\n"
-                f"[bold]Expires:[/bold] {expires_str}\n"
-                f"[bold]Username:[/bold] {session.username}\n"
-                f"[bold]Domain:[/bold] {session.domain}\n\n"
-                f"[dim]You can now receive emails at this address![/dim]",
-                title="✨ Email & Session Ready",
-                border_style="green"
-            ))
-
-            console.print("\n[bold cyan]Next steps:[/bold cyan]")
-            console.print("  • Monitor inbox: [green]tacomail list {}[/green]".format(email_address))
-            console.print("  • Wait for email: [green]tacomail wait {}[/green]".format(email_address))
+            display_results(email_address, session, expires_str)
 
     except Exception as e:
         console.print(f"[red]Error creating email and session:[/red] {e}")
@@ -268,15 +308,25 @@ def create_session(
         expires_dt = datetime.fromtimestamp(session.expires / 1000)
         expires_str = expires_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        console.print(Panel(
-            f"[bold green]Session Created[/bold green]\n\n"
-            f"Email: {email}\n"
-            f"Expires: {expires_str}\n"
-            f"Username: {session.username}\n"
-            f"Domain: {session.domain}",
-            title="🔐 Session",
-            border_style="green"
-        ))
+        data = {
+            "email": email,
+            "username": session.username,
+            "domain": session.domain,
+            "expires": expires_str,
+        }
+
+        def rich_output():
+            console.print(Panel(
+                f"[bold green]Session Created[/bold green]\n\n"
+                f"Email: {email}\n"
+                f"Expires: {expires_str}\n"
+                f"Username: {session.username}\n"
+                f"Domain: {session.domain}",
+                title="🔐 Session",
+                border_style="green"
+            ))
+
+        output_data(data, rich_output)
     except Exception as e:
         console.print(f"[red]Error creating session:[/red] {e}")
         raise typer.Exit(1)
@@ -302,7 +352,10 @@ def delete_session(
 
         client.delete_session(username, domain)
 
-        console.print(f"[green]✓ Session deleted for {email}[/green]")
+        def rich_output():
+            console.print(f"[green]✓ Session deleted for {email}[/green]")
+
+        output_data({"deleted": email}, rich_output)
     except Exception as e:
         console.print(f"[red]Error deleting session:[/red] {e}")
         raise typer.Exit(1)
@@ -327,24 +380,42 @@ def list_inbox(
         emails = client.get_inbox(email, limit=limit)
 
         if not emails:
+            if output_format != OutputFormat.RICH:
+                # For non-rich formats, output empty list
+                output_data([], lambda: None)
+                return
             console.print(f"[yellow]No emails found for {email}[/yellow]")
             return
 
-        table = Table(title=f"Inbox for {email}")
-        table.add_column("ID", style="cyan", no_wrap=True)
-        table.add_column("From", style="green")
-        table.add_column("Subject", style="white")
-        table.add_column("Date", style="blue")
+        # Prepare data for output
+        emails_data = [
+            {
+                "id": email_obj.id,
+                "from": email_obj.from_.address,
+                "subject": email_obj.subject,
+                "date": email_obj.date.strftime("%Y-%m-%d %H:%M"),
+            }
+            for email_obj in emails
+        ]
 
-        for email_obj in emails:
-            from_addr = f"{email_obj.from_.name} <{email_obj.from_.address}>"
-            subject = email_obj.subject[:50] + "..." if len(email_obj.subject) > 50 else email_obj.subject
-            date_str = email_obj.date.strftime("%Y-%m-%d %H:%M")
+        def rich_output():
+            table = Table(title=f"Inbox for {email}")
+            table.add_column("ID", style="cyan", no_wrap=True)
+            table.add_column("From", style="green")
+            table.add_column("Subject", style="white")
+            table.add_column("Date", style="blue")
 
-            table.add_row(email_obj.id, from_addr, subject, date_str)
+            for email_obj in emails:
+                from_addr = f"{email_obj.from_.name} <{email_obj.from_.address}>"
+                subject = email_obj.subject[:50] + "..." if len(email_obj.subject) > 50 else email_obj.subject
+                date_str = email_obj.date.strftime("%Y-%m-%d %H:%M")
 
-        console.print(table)
-        console.print(f"\n[dim]Showing {len(emails)} email(s)[/dim]")
+                table.add_row(email_obj.id, from_addr, subject, date_str)
+
+            console.print(table)
+            console.print(f"\n[dim]Showing {len(emails)} email(s)[/dim]")
+
+        output_data(emails_data, rich_output)
     except Exception as e:
         console.print(f"[red]Error listing inbox:[/red] {e}")
         raise typer.Exit(1)
@@ -369,7 +440,21 @@ def get_email(
         to_addr = f"{email_obj.to.name} <{email_obj.to.address}>"
         date_str = email_obj.date.strftime("%Y-%m-%d %H:%M:%S")
 
-        content = f"""
+        data = {
+            "id": email_obj.id,
+            "from": email_obj.from_.address,
+            "from_name": email_obj.from_.name,
+            "to": email_obj.to.address,
+            "to_name": email_obj.to.name,
+            "subject": email_obj.subject,
+            "date": date_str,
+            "attachments": len(email_obj.attachments),
+            "attachment_files": [att.fileName for att in email_obj.attachments],
+            "body": email_obj.body.text or "",
+        }
+
+        def rich_output():
+            content = f"""
 [bold]From:[/bold] {from_addr}
 [bold]To:[/bold] {to_addr}
 [bold]Subject:[/bold] {email_obj.subject}
@@ -379,18 +464,20 @@ def get_email(
 [bold]Attachments:[/bold] {len(email_obj.attachments)} file(s)
 """
 
-        if email_obj.attachments:
-            for att in email_obj.attachments:
-                status = "✓" if att.present else "✗"
-                content += f"  {status} {att.fileName} (ID: {att.id})\n"
+            if email_obj.attachments:
+                for att in email_obj.attachments:
+                    status = "✓" if att.present else "✗"
+                    content += f"  {status} {att.fileName} (ID: {att.id})\n"
 
-        content += "\n[bold]Body:[/bold]\n"
-        if email_obj.body.text:
-            content += f"\n{email_obj.body.text}\n"
-        else:
-            content += "[dim](No text body)[/dim]\n"
+            content += "\n[bold]Body:[/bold]\n"
+            if email_obj.body.text:
+                content += f"\n{email_obj.body.text}\n"
+            else:
+                content += "[dim](No text body)[/dim]\n"
 
-        console.print(Panel(content.strip(), title="📧 Email", border_style="blue"))
+            console.print(Panel(content.strip(), title="📧 Email", border_style="blue"))
+
+        output_data(data, rich_output)
     except Exception as e:
         console.print(f"[red]Error getting email:[/red] {e}")
         raise typer.Exit(1)
@@ -409,7 +496,11 @@ def delete_email(
 
     try:
         client.delete_email(email, mail_id)
-        console.print(f"[green]✓ Email {mail_id} deleted[/green]")
+
+        def rich_output():
+            console.print(f"[green]✓ Email {mail_id} deleted[/green]")
+
+        output_data({"deleted": mail_id}, rich_output)
     except Exception as e:
         console.print(f"[red]Error deleting email:[/red] {e}")
         raise typer.Exit(1)
@@ -429,11 +520,15 @@ def clear_inbox(
     client = get_client()
 
     try:
-        if not confirm:
+        if not confirm and output_format == OutputFormat.RICH:
             typer.confirm(f"Delete all emails from {email}?", abort=True)
 
         client.delete_inbox(email)
-        console.print(f"[green]✓ Inbox cleared for {email}[/green]")
+
+        def rich_output():
+            console.print(f"[green]✓ Inbox cleared for {email}[/green]")
+
+        output_data({"cleared": email}, rich_output)
     except Exception as e:
         console.print(f"[red]Error clearing inbox:[/red] {e}")
         raise typer.Exit(1)
@@ -453,7 +548,7 @@ def wait(
         None, "--filter", "-f", help="Filter by subject or sender (regex pattern)"
     ),
     print_body: bool = typer.Option(
-        False, "--print-body", "-p", help="Also print email body"
+        False, "--print-body", "-b", help="Also print email body"
     ),
 ) -> None:
     """Wait for a new email to arrive.
@@ -464,7 +559,8 @@ def wait(
     client = get_client()
 
     try:
-        console.print(f"[dim]Waiting for email to {email}... (timeout: {timeout}s)[/dim]")
+        if output_format == OutputFormat.RICH:
+            console.print(f"[dim]Waiting for email to {email}... (timeout: {timeout}s)[/dim]")
 
         if filter_pattern:
             # Create filter function
@@ -491,20 +587,39 @@ def wait(
             )
 
         if email_obj:
-            console.print("\n[green]✓ Email received![/green]")
-            console.print(f"  From: {email_obj.from_.name} <{email_obj.from_.address}>")
-            console.print(f"  Subject: {email_obj.subject}")
-
-            # Print email body if requested
+            date_str = email_obj.date.strftime("%Y-%m-%d %H:%M:%S")
+            data = {
+                "id": email_obj.id,
+                "from": email_obj.from_.address,
+                "from_name": email_obj.from_.name,
+                "subject": email_obj.subject,
+                "date": date_str,
+            }
             if print_body:
-                if email_obj.body.text:
-                    console.print("\n[bold]Email Body:[/bold]")
-                    console.print(f"{email_obj.body.text}")
-                else:
-                    console.print("\n[dim]No text body available[/dim]")
+                data["body"] = email_obj.body.text or ""
+
+            def rich_output():
+                console.print("\n[green]✓ Email received![/green]")
+                console.print(f"  From: {email_obj.from_.name} <{email_obj.from_.address}>")
+                console.print(f"  Subject: {email_obj.subject}")
+
+                # Print email body if requested
+                if print_body:
+                    if email_obj.body.text:
+                        console.print("\n[bold]Email Body:[/bold]")
+                        console.print(f"{email_obj.body.text}")
+                    else:
+                        console.print("\n[dim]No text body available[/dim]")
+
+            output_data(data, rich_output)
         else:
-            console.print("\n[yellow]⏱ Timeout: No email received[/yellow]")
+            def rich_output():
+                console.print("\n[yellow]⏱ Timeout: No email received[/yellow]")
+
+            output_data({"timeout": True}, rich_output)
             raise typer.Exit(1)
+    except typer.Exit:
+        raise
     except Exception as e:
         console.print(f"[red]Error waiting for email:[/red] {e}")
         raise typer.Exit(1)
@@ -518,10 +633,14 @@ def main(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
     ),
+    output: OutputFormat = typer.Option(
+        OutputFormat.RICH, "--output", "-o", help="Output format (rich, plain, json)"
+    ),
 ) -> None:
     """Tacomail CLI - Disposable email service command-line interface."""
-    global use_async
+    global use_async, output_format
     use_async = async_mode
+    output_format = output
 
     if verbose:
         import logging
